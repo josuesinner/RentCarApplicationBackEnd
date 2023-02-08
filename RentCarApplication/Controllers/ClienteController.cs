@@ -51,6 +51,10 @@ namespace RentCarApplication.Controllers
                     validarCedula.IsValidIdNumber(cliente.Cedula);
                     await _context.SaveChangesAsync();
                 }
+                else
+                {
+                    return BadRequest();
+                }
 
                     
             }

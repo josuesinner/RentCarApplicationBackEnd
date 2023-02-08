@@ -20,7 +20,7 @@ namespace RentCarApplication.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Renta_Devolucion>>> GetRenta_Devoluciones()
         {
-            return await _context.Renta_Devolucions.Include(x=>x.Empleado).Include(x => x.Vehiculo).Include(x => x.Cliente).ToListAsync();
+            return await _context.Renta_Devolucions.Include(x => x.Empleado).Include(x => x.Vehiculo).Include(x => x.Cliente).ToListAsync();
         }
 
         [HttpGet("{id}")]
@@ -64,17 +64,30 @@ namespace RentCarApplication.Controllers
         [HttpPost]
         public async Task<ActionResult<Renta_Devolucion>> PostRenta_Devoluciones(Renta_Devolucion renta_Devolucion)
         {
-            var insp = VehicleIsInspected((int)renta_Devolucion.VehiculoId, (int)renta_Devolucion.ClienteId);
+
+            var insp = VehicleIsInspected(renta_Devolucion.VehiculoId,renta_Devolucion.ClienteId);
 
             if (insp == false)
-            {
                 return BadRequest();
-            }
-            else
-            {
-                _context.Renta_Devolucions.Add(renta_Devolucion);
-                await _context.SaveChangesAsync();
-            }
+
+            //if (renta_Devolucion.Devolucion == true)
+            //{
+            //    return BadRequest();
+            //}
+            //else
+            //{
+            //    _context.Renta_Devolucions.Add(renta_Devolucion);
+            //    await _context.SaveChangesAsync();
+            //}
+
+            var rentado = await IsAvailableForRent(renta_Devolucion.VehiculoId, renta_Devolucion.Fecha_Renta, renta_Devolucion.Fecha_Devolucion);
+
+            if (!rentado)
+                return BadRequest(new { rentado = true }); // eso es para que verifiques el tipo de error en el front
+
+            _context.Renta_Devolucions.Add(renta_Devolucion);
+            await _context.SaveChangesAsync();
+
 
             return CreatedAtAction("GetRenta_Devolucion", new { id = renta_Devolucion.ClienteId }, renta_Devolucion);
         }
@@ -102,6 +115,17 @@ namespace RentCarApplication.Controllers
             var exists = _context.Inspeccions
                             .FirstOrDefault(x => x.VehiculoId == idVehicle && x.ClienteId == idClient);
             return exists != null;
+        }
+
+        private async Task<bool> IsAvailableForRent(int vehicleId, DateTime rentDate, DateTime returnDate)
+        {
+            // verificar si no hay rentas para ese vehiculo, en ese rango de fechas
+            var query = await _context.Renta_Devolucions
+                                        .Where(x => x.VehiculoId == vehicleId && x.Devolucion == false
+                                                && (rentDate >= x.Fecha_Renta.Date && rentDate <= x.Fecha_Devolucion
+                                                || returnDate >= x.Fecha_Renta && returnDate <= x.Fecha_Devolucion))
+                                        .CountAsync();
+            return query == 0;
         }
     }
 }

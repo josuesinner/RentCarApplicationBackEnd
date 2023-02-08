@@ -52,6 +52,10 @@ namespace RentCarApplication.Controllers
                     validarCedula.IsValidIdNumber(empleado.Cedula);
                     await _context.SaveChangesAsync();
                 }
+                else
+                {
+                    return BadRequest();
+                }
                     
             }
             catch (DbUpdateConcurrencyException)
@@ -79,6 +83,10 @@ namespace RentCarApplication.Controllers
                 {
                     _context.Empleados.Add(empleado);
                     await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    return BadRequest();
                 }
 
             }
